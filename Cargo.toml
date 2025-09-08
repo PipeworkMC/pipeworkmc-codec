@@ -1,0 +1,15 @@
+[package]
+name    = "pipeworkmc-codec"
+version = "0.1.0"
+edition = "2024"
+
+[lints.rust]
+unused_parens = "allow"
+
+
+[dependencies.atomic_enum]
+version = "0.3"
+
+[dependencies.uuid]
+version  = "1.18"
+features = [ "v3", "serde" ]
