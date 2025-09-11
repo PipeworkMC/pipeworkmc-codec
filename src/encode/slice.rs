@@ -12,17 +12,13 @@ use std::borrow::Cow;
 
 unsafe impl<T> PacketEncode for [T]
 where
-    T : PacketEncode + 'static
+    T : PacketEncode
 {
 
     #[inline]
     fn encode_len(&self) -> usize {
-        let prefix_len = VarInt::<u32>(self.len() as u32).encode_len();
-        if (TypeId::of::<T>() == TypeId::of::<u8>()) {
-            prefix_len + self.len()
-        } else {
-            prefix_len + self.iter().map(|item| item.encode_len()).sum::<usize>()
-        }
+        VarInt::<u32>(self.len() as u32).encode_len()
+        + self.iter().map(|item| item.encode_len()).sum::<usize>() // TODO: Special case for `[u8]`.
     }
 
     unsafe fn encode(&self, buf : &mut EncodeBuf) { unsafe {
@@ -35,9 +31,9 @@ where
 }
 
 
-unsafe impl<T> PacketEncode for Cow<'_, [T]>
+unsafe impl<'l, T> PacketEncode for Cow<'l, [T]>
 where
-    T   : PacketEncode + 'static,
+    T   : PacketEncode + 'l,
     [T] : ToOwned
 {
 
