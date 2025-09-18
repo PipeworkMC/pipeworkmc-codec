@@ -1,4 +1,7 @@
-use crate::meta::PacketMeta;
+use crate::{
+    meta::PacketMeta,
+    varint::VarInt
+};
 use core::{
     mem::{ self, MaybeUninit },
     ptr
@@ -35,6 +38,16 @@ impl EncodeBuf {
     #[inline(always)]
     pub fn written(&self) -> usize { self.head }
 
+    #[inline(always)]
+    pub unsafe fn into_inner(self) -> Box<[u8]> {
+        unsafe { self.buf.assume_init() }
+    }
+
+    #[inline]
+    pub unsafe fn into_inner_as_vec(self) -> Vec<u8> {
+        unsafe { self.buf.assume_init() }.into_vec()
+    }
+
 }
 
 impl EncodeBuf {
@@ -42,6 +55,14 @@ impl EncodeBuf {
     #[inline]
     pub fn new(len : usize) -> Self {
         Self { head : 0, buf : Box::new_uninit_slice(len) }
+    }
+
+    #[inline]
+    pub fn new_len_prefixed(len : usize) -> Self {
+        let len_varint = VarInt::<u32>(len as u32);
+        let mut buf = Self::new(len_varint.encode_len() + len);
+        unsafe { len_varint.encode(&mut buf); }
+        buf
     }
 
     pub unsafe fn write(&mut self, b : u8) {

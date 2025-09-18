@@ -8,10 +8,6 @@
 
 )]
 
-
-mod version;
-pub use version::Protocol;
-
 pub mod decode;
 pub mod encode;
 pub mod meta;

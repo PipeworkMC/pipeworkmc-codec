@@ -5,12 +5,12 @@ pub trait PacketMeta {
     const STATE  : PacketState;
     const BOUND  : PacketBound;
     const PREFIX : u8;
+    const KICK   : bool        = false;
 }
 
+#[derive(PartialEq, Eq, Hash)]
 #[atomic_enum]
-#[derive(PartialEq, Eq, Hash, Default)]
 pub enum PacketState {
-    #[default]
     Handshake,
     Status,
     Login,
