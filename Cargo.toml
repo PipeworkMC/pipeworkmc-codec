@@ -3,6 +3,9 @@ name    = "pipeworkmc-codec"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+chrono = [ "dep:chrono" ]
+
 [lints.rust]
 unused_parens = "allow"
 # TODO: missing_docs = "deny"
@@ -13,6 +16,10 @@ missing_safety_doc = "allow" # TODO: Remove
 [dependencies.uuid]
 version  = "1.18"
 features = [ "v3", "serde" ]
+
+[dependencies.chrono]
+version  = "0.4"
+optional = true
 
 [dependencies.atomic_enum]
 version = "0.3"

@@ -12,5 +12,8 @@ pub mod decode;
 pub mod encode;
 pub mod meta;
 
-pub use uuid;
 pub mod varint;
+
+pub use uuid;
+#[cfg(feature = "chrono")]
+pub use chrono;

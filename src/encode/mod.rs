@@ -14,6 +14,8 @@ mod option;
 pub mod slice;
 mod str;
 mod tuple;
+#[cfg(feature = "chrono")]
+mod datetime;
 
 
 pub struct EncodeBuf {

@@ -9,6 +9,8 @@ pub mod array;
 mod num;
 pub mod string;
 pub mod vec;
+#[cfg(feature = "chrono")]
+pub mod datetime;
 
 
 pub struct DecodeBuf<'l> {
