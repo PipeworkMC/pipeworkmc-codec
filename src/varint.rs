@@ -1,7 +1,10 @@
+//! The variable-length integer type.
+
+
 use crate::{
     decode::{
         PacketDecode,
-        DecodeBuf,
+        DecodeIter,
         IncompleteDecodeError
     },
     encode::{
@@ -15,6 +18,11 @@ use core::{
 };
 
 
+/// A variable-length integer.
+///
+/// Though this structure is called *"VarInt"*, it handles both Minecraft's *"VarInt"* and
+///  *"VarLong"* types as `VarInt<i32>` and `VarInt<i64>`, respectively.
+#[expect(private_bounds)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct VarInt<T>(pub T)
 where
@@ -31,11 +39,11 @@ where
 }
 
 
-pub const SEGMENT_BITS : u8 = 0b01111111;
-pub const CONTINUE_BIT : u8 = 0b10000000;
+const SEGMENT_BITS : u8 = 0b01111111;
+const CONTINUE_BIT : u8 = 0b10000000;
 
 
-pub unsafe trait VarIntType
+unsafe trait VarIntType
 where
     Self : Copy + Sized
 {
@@ -47,7 +55,7 @@ where
 
     fn encode_len(self) -> usize;
 
-    fn encode(self, buf : &mut Self::EncodeBuf) -> &[u8];
+    unsafe fn encode(self, buf : &mut Self::EncodeBuf) -> &[u8];
 
 }
 
@@ -79,11 +87,12 @@ macro impl_varinttype_for_signed_int($unsigned_ty:ty => $signed_ty:ty) {
             <$unsigned_ty as VarIntType>::encode_len(self.cast_unsigned())
         }
 
-        fn encode(mut self, buf : &mut Self::EncodeBuf) -> &[u8] {
+        unsafe fn encode(mut self, buf : &mut Self::EncodeBuf) -> &[u8] {
             const SELF_SEGMENT_BITS : $signed_ty = SEGMENT_BITS as $signed_ty;
             const SELF_CONTINUE_BIT : $signed_ty = CONTINUE_BIT as $signed_ty;
             let mut i = 0;
             loop {
+                // SAFETY: `self` can never be greater than `Self::MAX`. `Self::EncodeBuf` has enough space to hold `Self::MAX`.
                 if ((self & (! SELF_SEGMENT_BITS)) == 0) {
                     *unsafe { buf.get_unchecked_mut(i) } = (self & 0xFF) as u8;
                     i += 1;
@@ -122,9 +131,9 @@ macro impl_varinttype_for_unsigned_int($signed_ty:ty => $unsigned_ty:ty) {
         type EncodeBuf = <$signed_ty as VarIntType>::EncodeBuf;
 
         #[inline]
-        fn encode(self, buf : &mut Self::EncodeBuf) -> &[u8] {
+        unsafe fn encode(self, buf : &mut Self::EncodeBuf) -> &[u8] { unsafe {
             <$signed_ty as VarIntType>::encode(self.cast_signed(), buf)
-        }
+        } }
 
     }
 }
@@ -141,10 +150,11 @@ where
 {
     type Error = VarIntDecodeError;
 
-    fn decode(buf : &mut DecodeBuf<'_>)
-        -> Result<Self, Self::Error>
+    fn decode<I>(buf : &mut DecodeIter<I>) -> Result<Self, Self::Error>
+    where
+        I : ExactSizeIterator<Item = u8>
     {
-        let (value, consumed,) = T::decode(buf.iter())?;
+        let (value, consumed,) = T::decode(&mut*buf)?;
         buf.skip(consumed)?;
         Ok(VarInt(value))
     }
@@ -169,9 +179,12 @@ where
 }
 
 
+/// Returned by packet decoders when a `VarInt<T>` was not decoded successfully.
 #[derive(Debug)]
 pub enum VarIntDecodeError {
+    /// There were not enough bytes.
     Incomplete(IncompleteDecodeError),
+    /// The decoded value was longer than the maximum number of bytes allowed by the protocol.
     TooLong
 }
 impl From<IncompleteDecodeError> for VarIntDecodeError {

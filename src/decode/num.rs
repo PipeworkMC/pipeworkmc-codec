@@ -1,6 +1,6 @@
 use crate::decode::{
     PacketDecode,
-    DecodeBuf,
+    DecodeIter,
     IncompleteDecodeError
 };
 use uuid::Uuid;
@@ -10,9 +10,10 @@ macro impl_packetdecode_for_num($ty:ty) {
     impl PacketDecode for $ty {
         type Error = IncompleteDecodeError;
 
-        fn decode(buf : &mut DecodeBuf<'_>)
-            -> Result<Self, Self::Error>
-        { Ok(Self::from_be_bytes(buf.read_arr()?)) }
+        fn decode<I>(iter : &mut DecodeIter<I>) -> Result<Self, Self::Error>
+        where
+            I : ExactSizeIterator<Item = u8>
+        { Ok(Self::from_be_bytes(iter.read_arr()?)) }
     }
 }
 
@@ -34,16 +35,18 @@ impl PacketDecode for bool {
     type Error = IncompleteDecodeError;
 
     #[inline(always)]
-    fn decode(buf : &mut DecodeBuf<'_>)
-        -> Result<Self, Self::Error>
-    { Ok(buf.read()? != 0) }
+    fn decode<I>(iter : &mut DecodeIter<I>) -> Result<Self, Self::Error>
+    where
+        I : ExactSizeIterator<Item = u8>
+    { Ok(iter.read()? != 0) }
 }
 
 impl PacketDecode for Uuid {
     type Error = IncompleteDecodeError;
 
     #[inline(always)]
-    fn decode(buf : &mut DecodeBuf<'_>)
-        -> Result<Self, Self::Error>
-    { Ok(Uuid::from_u128(<_>::decode(buf)?)) }
+    fn decode<I>(iter : &mut DecodeIter<I>) -> Result<Self, Self::Error>
+    where
+        I : ExactSizeIterator<Item = u8>
+    { Ok(Uuid::from_u128(<_>::decode(iter)?)) }
 }

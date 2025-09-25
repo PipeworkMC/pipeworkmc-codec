@@ -1,9 +1,13 @@
+#![doc = include_str!("../README.md")]
+
+
 #![feature(
 
     // Syntax
     decl_macro,
 
     // Standard library
+    iter_next_chunk,
     maybe_uninit_array_assume_init
 
 )]

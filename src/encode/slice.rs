@@ -1,3 +1,6 @@
+//! `&[T]` encoder.
+
+
 use crate::encode::{
     PacketEncode,
     EncodeBuf
@@ -5,7 +8,7 @@ use crate::encode::{
 use crate::varint::VarInt;
 use core::{
     any::TypeId,
-    ops::{ Deref, DerefMut }
+    ops::Deref
 };
 use std::borrow::Cow;
 
@@ -64,29 +67,33 @@ where
 }
 
 
+/// A `&[T]` or `Vec<T>` which will be encoded without a [`VarInt`] length.
+/// Decoders must know the length from context.
 #[derive(Clone, Debug)]
-pub struct UnprefixedVec<T>(pub Vec<T>);
+pub struct UnprefixedSlice<'l, T>(pub Cow<'l, [T]>)
+where
+    T : Clone;
 
-impl<T> From<Vec<T>> for UnprefixedVec<T> {
+impl<'l, T> From<Vec<T>> for UnprefixedSlice<'l, T>
+where
+    T : Clone
+{
     #[inline(always)]
-    fn from(value : Vec<T>) -> Self { Self(value) }
+    fn from(value : Vec<T>) -> Self { Self(Cow::Owned(value)) }
 }
 
-impl<T> Deref for UnprefixedVec<T> {
-    type Target = Vec<T>;
-
+impl<'l, T> Deref for UnprefixedSlice<'l, T>
+where
+    T : Clone
+{
+    type Target = [T];
     #[inline(always)]
     fn deref(&self) -> &Self::Target { &self.0 }
 }
 
-impl<T> DerefMut for UnprefixedVec<T> {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
-}
-
-unsafe impl<T> PacketEncode for UnprefixedVec<T>
+unsafe impl<'l, T> PacketEncode for UnprefixedSlice<'l, T>
 where
-    T : PacketEncode + 'static
+    T : Clone + PacketEncode + 'static
 {
 
     #[inline]

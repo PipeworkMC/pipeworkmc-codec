@@ -8,11 +8,11 @@ use chrono::{ DateTime, Utc };
 
 impl PacketDecode for DateTime<Utc> {
     type Error = DateTimeDecodeError;
-    fn decode(buf : &mut DecodeBuf<'_>)
+    fn decode(iter : &mut DecodeBuf<'_>)
         -> Result<Self, Self::Error>
     { Self::from_timestamp(
-        <_>::decode(buf).map_err(DateTimeDecodeError::Secs)?,
-        <_>::decode(buf).map_err(DateTimeDecodeError::Nanos)?
+        <_>::decode(iter).map_err(DateTimeDecodeError::Secs)?,
+        <_>::decode(iter).map_err(DateTimeDecodeError::Nanos)?
     ).ok_or(DateTimeDecodeError::Invalid) }
 }
 
