@@ -32,7 +32,7 @@ impl PacketDecode for String {
 /// Returned by packet decoders when a `String` was not decoded successfully.
 #[derive(Debug)]
 pub enum StringDecodeError {
-    /// The length of the array failed to decode.
+    /// The length of the string failed to decode.
     Length(VarIntDecodeError),
     /// There were not enough bytes.
     Incomplete(IncompleteDecodeError),

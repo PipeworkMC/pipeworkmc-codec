@@ -22,7 +22,6 @@ use core::{
 ///
 /// Though this structure is called *"VarInt"*, it handles both Minecraft's *"VarInt"* and
 ///  *"VarLong"* types as `VarInt<i32>` and `VarInt<i64>`, respectively.
-#[expect(private_bounds)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct VarInt<T>(pub T)
 where
@@ -43,18 +42,28 @@ const SEGMENT_BITS : u8 = 0b01111111;
 const CONTINUE_BIT : u8 = 0b10000000;
 
 
-unsafe trait VarIntType
+/// An inner type for VarInts.
+///
+/// ### Safety
+/// This trait requires the same guarantees as [`PacketEncode`].
+pub unsafe trait VarIntType
 where
     Self : Copy + Sized
 {
 
+    /// Analagous to [`PacketDecode::decode`].
+    ///
+    /// Must return the number of bytes that were consumed.
     fn decode(iter : impl Iterator<Item = u8>)
         -> Result<(Self, usize,), VarIntDecodeError>;
 
+    /// The buffer type that the encoding process will use.
     type EncodeBuf : Default;
 
+    /// Analagous to [`PacketEncode::encode_len`].
     fn encode_len(self) -> usize;
 
+    /// Analagous to [`PacketEncode::encode`].
     unsafe fn encode(self, buf : &mut Self::EncodeBuf) -> &[u8];
 
 }
@@ -150,12 +159,11 @@ where
 {
     type Error = VarIntDecodeError;
 
-    fn decode<I>(buf : &mut DecodeIter<I>) -> Result<Self, Self::Error>
+    fn decode<I>(iter : &mut DecodeIter<I>) -> Result<Self, Self::Error>
     where
         I : ExactSizeIterator<Item = u8>
     {
-        let (value, consumed,) = T::decode(&mut*buf)?;
-        buf.skip(consumed)?;
+        let (value, _consumed,) = T::decode(&mut*iter)?;
         Ok(VarInt(value))
     }
 }

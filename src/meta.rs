@@ -24,7 +24,7 @@ pub trait PacketMeta {
 
 
 /// The state in which a packet will be sent.
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(u8)]
 pub enum PacketState {
 
@@ -49,6 +49,7 @@ pub enum PacketState {
 /// A `PacketState` which can be safely shared between threads.
 ///
 /// This type has the same size, alignment, and bit validity as a [`u8`].
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct AtomicPacketState(AtomicU8);
 impl AtomicPacketState {

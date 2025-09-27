@@ -17,18 +17,26 @@ pub mod datetime;
 pub struct DecodeIter<I>
 where
     I : ExactSizeIterator<Item = u8>
-{ iter : I }
+{
+    iter : I,
+    head : usize
+}
 
 impl<I> DecodeIter<I>
 where
     I : ExactSizeIterator<Item = u8>
 {
 
+    /// Returns the number of bytes which have been consumed.
+    #[inline(always)]
+    pub fn consumed(&self) -> usize { self.head }
+
     /// Reads a single byte from the iterator.
     ///
     /// This is similar to calling [`Iterator::next`], but returns a `Result` instead of an `Option`.
     pub fn read(&mut self) -> Result<u8, IncompleteDecodeError> {
         let b = self.iter.next().ok_or(IncompleteDecodeError)?;
+        self.head += 1;
         Ok(b)
     }
 
@@ -36,13 +44,16 @@ where
     pub fn read_vec(&mut self, count : usize) -> Result<Vec<u8>, IncompleteDecodeError> {
         let mut buf = Vec::with_capacity(count);
         for _ in 0..count { buf.push(self.iter.next().ok_or(IncompleteDecodeError)?); }
+        self.head += count;
         Ok(buf)
     }
 
     /// Reads `N` bytes from the iterator into an array.
     #[inline(always)]
     pub fn read_arr<const N : usize>(&mut self) -> Result<[u8; N], IncompleteDecodeError> {
-        Ok(self.iter.next_chunk::<N>().map_err(|_| IncompleteDecodeError)?)
+        let b = self.iter.next_chunk::<N>().map_err(|_| IncompleteDecodeError)?;
+        self.head += N;
+        Ok(b)
     }
 
     /// Reads enough bytes from the iterator to fill the buffer.
@@ -51,12 +62,14 @@ where
             // SAFETY: `i` is always less than `buf.len()`.
             unsafe { *buf.get_unchecked_mut(i) = self.iter.next().ok_or(IncompleteDecodeError)?; }
         }
+        self.head += buf.len();
         Ok(())
     }
 
     /// Skips the next `count` bytes in the iterator.
     pub fn skip(&mut self, count : usize) -> Result<(), IncompleteDecodeError> {
         for _ in 0..count { self.iter.next().ok_or(IncompleteDecodeError)?; }
+        self.head += count;
         Ok(())
     }
 
@@ -67,7 +80,9 @@ where
     I : ExactSizeIterator<Item = u8>
 {
     #[inline(always)]
-    fn from(iter : I) -> Self { Self { iter } }
+    fn from(iter : I) -> Self {
+        Self { iter, head : 0 }
+    }
 }
 
 impl<I> Iterator for DecodeIter<I>
@@ -76,7 +91,9 @@ where
 {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        let b = self.iter.next()?;
+        self.head += 1;
+        Some(b)
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.iter.len();
